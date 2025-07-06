@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
@@ -6,6 +6,7 @@ import { PrismaService } from 'src/modules/prisma/prisma.service';
 @Injectable()
 export class TransactionService {
   constructor(private readonly prisma: PrismaService) {}
+
   async create({ category, data, price, title, type }: CreateTransactionDto) {
     const createdTransaction = await this.prisma.transaction.create({
       data: {
@@ -19,8 +20,14 @@ export class TransactionService {
     return createdTransaction;
   }
 
-  async findAll() {
-    const transactions = await this.prisma.transaction.findMany();
+  async findAll(skip?: number, take?: number) {
+    const transactions = await this.prisma.transaction.findMany({
+      skip: skip,
+      take: take,
+      orderBy: {
+        data: 'desc',
+      },
+    });
     return transactions;
   }
 
@@ -35,7 +42,7 @@ export class TransactionService {
     const foundTransaction = await this.findOne(id);
 
     if (!foundTransaction) {
-      throw new BadRequestException(`Transaction with id ${id} not found`);
+      throw new NotFoundException(`Transaction with id ${id} not found`);
     }
 
     const updatedTransaction = await this.prisma.transaction.update({
@@ -49,7 +56,7 @@ export class TransactionService {
     const foundTransaction = await this.findOne(id);
 
     if (!foundTransaction) {
-      throw new BadRequestException(`Transaction with id ${id} not found`);
+      throw new NotFoundException(`Transaction with ID "${id}" not found`);
     }
 
     await this.prisma.transaction.delete({

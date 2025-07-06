@@ -8,6 +8,7 @@ import {
   Delete,
   Res,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -30,8 +31,15 @@ export class TransactionController {
   }
 
   @Get()
-  async findAll(@Res() res: Response) {
-    const transactions = await this.transactionService.findAll();
+  async findAll(
+    @Res() res: Response,
+    @Query('skip') skip?: string,
+    @Query('take') take?: string,
+  ) {
+    const parsedSkip = skip ? +skip : undefined;
+    const parsedTake = take ? +take : undefined;
+
+    const transactions = await this.transactionService.findAll(parsedSkip, parsedTake);
     return res.status(HttpStatus.OK).send(transactions);
   }
 
