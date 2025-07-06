@@ -20,15 +20,22 @@ export class TransactionService {
     return createdTransaction;
   }
 
+  // MUDANÇA AQUI: findAll para retornar { data: transactions, totalCount: totalCount }
   async findAll(skip?: number, take?: number) {
     const transactions = await this.prisma.transaction.findMany({
       skip: skip,
       take: take,
       orderBy: {
-        data: 'desc',
+        data: 'desc', // Ou 'createdAt' ou outro campo para ordenar as transações
       },
     });
-    return transactions;
+
+    const totalCount = await this.prisma.transaction.count(); // NOVO: Conta todas as transações
+
+    return {
+      data: transactions,
+      totalCount: totalCount,
+    };
   }
 
   async findOne(id: string) {
