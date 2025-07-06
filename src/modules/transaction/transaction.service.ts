@@ -1,3 +1,5 @@
+// src/transaction/transaction.service.ts
+
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
@@ -20,21 +22,48 @@ export class TransactionService {
     return createdTransaction;
   }
 
-  // MUDANÇA AQUI: findAll para retornar { data: transactions, totalCount: totalCount }
+  // MUDANÇA AQUI: findAll para retornar { data, totalCount, totalIncome, totalOutcome, total }
   async findAll(skip?: number, take?: number) {
     const transactions = await this.prisma.transaction.findMany({
-      skip: skip,
-      take: take,
+      skip,
+      take,
       orderBy: {
-        data: 'desc', // Ou 'createdAt' ou outro campo para ordenar as transações
+        data: 'desc',
       },
     });
 
-    const totalCount = await this.prisma.transaction.count(); // NOVO: Conta todas as transações
+    const totalCount = await this.prisma.transaction.count(); // Conta todas as transações
+
+    // NOVO: Calcular os totais globais de entrada e saída
+    const totalIncomeAggregation = await this.prisma.transaction.aggregate({
+      _sum: {
+        price: true,
+      },
+      where: {
+        type: 'INCOME',
+      },
+    });
+
+    const totalOutcomeAggregation = await this.prisma.transaction.aggregate({
+      _sum: {
+        price: true,
+      },
+      where: {
+        type: 'OUTCOME',
+      },
+    });
+
+    const totalIncome = totalIncomeAggregation._sum.price || 0;
+    const totalOutcome = totalOutcomeAggregation._sum.price || 0;
+    const total = totalIncome - totalOutcome;
 
     return {
       data: transactions,
       totalCount: totalCount,
+      // NOVO: Incluir os totais globais na resposta
+      totalIncome: totalIncome,
+      totalOutcome: totalOutcome,
+      total: total,
     };
   }
 
@@ -59,6 +88,7 @@ export class TransactionService {
     return updatedTransaction;
   }
 
+  // Correção: Adicionado 'async' à função remove
   async remove(id: string) {
     const foundTransaction = await this.findOne(id);
 
